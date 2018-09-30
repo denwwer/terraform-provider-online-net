@@ -8,12 +8,12 @@ import (
 	"github.com/src-d/terraform-provider-online-net/online"
 )
 
-func resourceRPN() *schema.Resource {
+func resourceRPNv2() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceRPNCreate,
-		Update: resourceRPNUpdate,
-		Read:   resourceRPNRead,
-		Delete: resourceRPNDelete,
+		Create: resourceRPNv2Create,
+		Update: resourceRPNv2Update,
+		Read:   resourceRPNv2Read,
+		Delete: resourceRPNv2Delete,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -38,48 +38,48 @@ func resourceRPN() *schema.Resource {
 	}
 }
 
-func resourceRPNCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceRPNv2Create(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	c := meta.(online.Client)
-	rpn, err := c.RPNv2ByName(name)
+	rpnv2, err := c.RPNv2ByName(name)
 	if err != nil {
 		return err
 	}
 
-	if rpn != nil {
+	if rpnv2 != nil {
 		return fmt.Errorf("RPN already exists")
 	}
 
-	rpn = &online.RPNv2{
+	rpnv2 = &online.RPNv2{
 		Name: name,
 		Type: online.RPNv2Type(d.Get("type").(string)),
 	}
 
-	return setRPN(c, rpn, d)
+	return setRPNv2(c, rpnv2, d)
 }
 
-func resourceRPNUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceRPNv2Update(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	c := meta.(online.Client)
-	rpn, err := c.RPNv2ByName(name)
+	rpnv2, err := c.RPNv2ByName(name)
 	if err != nil {
 		return err
 	}
 
-	if rpn == nil {
+	if rpnv2 == nil {
 		return fmt.Errorf("missing RPNv2 group: %q", name)
 	}
 
-	rpn = &online.RPNv2{
-		ID:   rpn.ID,
+	rpnv2 = &online.RPNv2{
+		ID:   rpnv2.ID,
 		Name: name,
 		Type: online.RPNv2Type(d.Get("type").(string)),
 	}
 
-	return setRPN(c, rpn, d)
+	return setRPNv2(c, rpnv2, d)
 }
 
-func setRPN(c online.Client, rpn *online.RPNv2, d *schema.ResourceData) error {
+func setRPNv2(c online.Client, rpnv2 *online.RPNv2, d *schema.ResourceData) error {
 	server_ids := d.Get("server_ids").([]interface{})
 	if len(server_ids) == 0 {
 		return fmt.Errorf("server_ids cannot be empty")
@@ -89,51 +89,51 @@ func setRPN(c online.Client, rpn *online.RPNv2, d *schema.ResourceData) error {
 		m := &online.Member{}
 		m.Linked.ID = id.(int)
 		m.VLAN = d.Get("vlan").(int)
-		rpn.Members = append(rpn.Members, m)
+		rpnv2.Members = append(rpnv2.Members, m)
 	}
 
-	if err := c.SetRPNv2(rpn, time.Minute); err != nil {
+	if err := c.SetRPNv2(rpnv2, time.Minute); err != nil {
 		return err
 	}
 
-	d.SetId(rpn.Name)
+	d.SetId(rpnv2.Name)
 
 	return nil
 
 }
 
-func resourceRPNRead(d *schema.ResourceData, meta interface{}) error {
+func resourceRPNv2Read(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 
 	c := meta.(online.Client)
-	rpn, err := c.RPNv2ByName(name)
+	rpnv2, err := c.RPNv2ByName(name)
 	if err != nil {
 		return err
 	}
 
-	if rpn == nil {
+	if rpnv2 == nil {
 		return fmt.Errorf("missing RPNv2 group: %q", name)
 	}
 
-	d.SetId(rpn.Name)
+	d.SetId(rpnv2.Name)
 
 	return nil
 }
 
-func resourceRPNDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceRPNv2Delete(d *schema.ResourceData, meta interface{}) error {
 	if d.Id() == "" {
 		return nil
 	}
 
 	c := meta.(online.Client)
-	rpn, err := c.RPNv2ByName(d.Id())
+	rpnv2, err := c.RPNv2ByName(d.Id())
 	if err != nil {
 		return err
 	}
 
-	if rpn == nil {
+	if rpnv2 == nil {
 		return nil
 	}
 
-	return c.DeleteRPNv2(rpn.ID, time.Minute)
+	return c.DeleteRPNv2(rpnv2.ID, time.Minute)
 }
