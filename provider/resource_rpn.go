@@ -29,13 +29,37 @@ func resourceRPN() *schema.Resource {
 				Type:     schema.TypeInt,
 				Required: true,
 			},
+			"server_ids": {
+				Type:     schema.TypeList,
+				Required: true,
+				Elem:     &schema.Schema{Type: schema.TypeInt},
+			},
 		},
 	}
 }
 
 func resourceRPNCreate(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
+	c := meta.(online.Client)
+	rpn, err := c.RPNv2ByName(name)
+	if err != nil {
+		return err
+	}
 
+	if rpn != nil {
+		return fmt.Errorf("RPN already exists")
+	}
+
+	rpn = &online.RPNv2{
+		Name: name,
+		Type: online.RPNv2Type(d.Get("type").(string)),
+	}
+
+	return setRPN(c, rpn, d)
+}
+
+func resourceRPNUpdate(d *schema.ResourceData, meta interface{}) error {
+	name := d.Get("name").(string)
 	c := meta.(online.Client)
 	rpn, err := c.RPNv2ByName(name)
 	if err != nil {
@@ -43,33 +67,39 @@ func resourceRPNCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if rpn == nil {
-		rpn = &online.RPNv2{Name: name}
+		return fmt.Errorf("missing RPNv2 group: %q", name)
 	}
 
-	rpn.Type = online.RPNv2Type(d.Get("type").(string))
+	rpn = &online.RPNv2{
+		ID:   rpn.ID,
+		Name: name,
+		Type: online.RPNv2Type(d.Get("type").(string)),
+	}
 
-	d.SetId(rpn.Name)
-	globalCache.addRPN(rpn, d.Get("vlan").(int))
-
-	return nil
+	return setRPN(c, rpn, d)
 }
 
-func resourceRPNUpdate(d *schema.ResourceData, meta interface{}) error {
-	if err := resourceRPNRead(d, meta); err != nil {
+func setRPN(c online.Client, rpn *online.RPNv2, d *schema.ResourceData) error {
+	server_ids := d.Get("server_ids").([]interface{})
+	if len(server_ids) == 0 {
+		return fmt.Errorf("server_ids cannot be empty")
+	}
+
+	for _, id := range server_ids {
+		m := &online.Member{}
+		m.Linked.ID = id.(int)
+		m.VLAN = d.Get("vlan").(int)
+		rpn.Members = append(rpn.Members, m)
+	}
+
+	if err := c.SetRPNv2(rpn, time.Minute); err != nil {
 		return err
 	}
 
-	name := d.Get("name").(string)
-	cache := globalCache.rpn[name]
+	d.SetId(rpn.Name)
 
-	for _, m := range cache.Members {
-		m.VLAN = cache.VLAN
-	}
+	return nil
 
-	cache.Type = online.RPNv2Type(d.Get("type").(string))
-
-	c := meta.(online.Client)
-	return c.SetRPNv2(&cache.RPNv2, time.Minute)
 }
 
 func resourceRPNRead(d *schema.ResourceData, meta interface{}) error {
@@ -86,7 +116,6 @@ func resourceRPNRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(rpn.Name)
-	globalCache.addRPN(rpn, d.Get("vlan").(int))
 
 	return nil
 }
