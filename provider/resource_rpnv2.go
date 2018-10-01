@@ -41,42 +41,41 @@ func resourceRPNv2() *schema.Resource {
 func resourceRPNv2Create(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	c := meta.(online.Client)
-	rpnv2, err := c.RPNv2ByName(name)
+	currentRPNv2, err := c.RPNv2ByName(name)
 	if err != nil {
 		return err
 	}
-
-	if rpnv2 != nil {
+	if currentRPNv2 != nil {
 		return fmt.Errorf("RPN already exists")
 	}
 
-	rpnv2 = &online.RPNv2{
+	newRPNv2 := &online.RPNv2{
 		Name: name,
 		Type: online.RPNv2Type(d.Get("type").(string)),
 	}
 
-	return setRPNv2(c, rpnv2, d)
+	return setRPNv2(c, newRPNv2, d)
 }
 
 func resourceRPNv2Update(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	c := meta.(online.Client)
-	rpnv2, err := c.RPNv2ByName(name)
+	currentRPNv2, err := c.RPNv2ByName(name)
 	if err != nil {
 		return err
 	}
 
-	if rpnv2 == nil {
+	if currentRPNv2 == nil {
 		return fmt.Errorf("missing RPNv2 group: %q", name)
 	}
 
-	rpnv2 = &online.RPNv2{
-		ID:   rpnv2.ID,
+	newRPNv2 := &online.RPNv2{
+		ID:   currentRPNv2.ID,
 		Name: name,
 		Type: online.RPNv2Type(d.Get("type").(string)),
 	}
 
-	return setRPNv2(c, rpnv2, d)
+	return setRPNv2(c, newRPNv2, d)
 }
 
 func setRPNv2(c online.Client, rpnv2 *online.RPNv2, d *schema.ResourceData) error {
@@ -104,7 +103,6 @@ func setRPNv2(c online.Client, rpnv2 *online.RPNv2, d *schema.ResourceData) erro
 
 func resourceRPNv2Read(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
-
 	c := meta.(online.Client)
 	rpnv2, err := c.RPNv2ByName(name)
 	if err != nil {
