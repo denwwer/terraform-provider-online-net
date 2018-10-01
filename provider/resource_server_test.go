@@ -4,160 +4,65 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/src-d/terraform-provider-online-net/online"
 )
+
+func init() {
+	onlineClientMock.On("SetServer", &online.Server{
+		Hostname: "mvp",
+		IP: []*online.Interface{
+			&online.Interface{
+				Address: "1.2.3.4",
+				MAC:     "aa:bb:cc:dd:ee:ff",
+				Reverse: "my.dns.address",
+				Type:    online.Public,
+			},
+			&online.Interface{
+				Address: "10.2.3.4",
+				MAC:     "00:bb:cc:dd:ee:ff",
+				Type:    online.Private,
+			},
+		},
+	}).Return(nil)
+	onlineClientMock.On("Server", 105770).Return(&online.Server{
+		IP: []*online.Interface{
+			&online.Interface{
+				Address: "1.2.3.4",
+				MAC:     "aa:bb:cc:dd:ee:ff",
+				Reverse: "my.dns.address",
+				Type:    online.Public,
+			},
+			&online.Interface{
+				Address: "10.2.3.4",
+				MAC:     "00:bb:cc:dd:ee:ff",
+				Type:    online.Private,
+			},
+		},
+	}, nil)
+}
 
 func TestResourceServer(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		Providers:  testAccProviders,
+		IsUnitTest: true,
 		Steps: []resource.TestStep{{
 			ImportStateVerify: true,
 			Config: `
 				resource "online_server" "test" {
-					server_id = "105770"
+					server_id = 105770
 					hostname = "mvp"
 				}
 			`,
 			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("online_server.test", "hostname", "mvp"),
+				resource.TestCheckResourceAttr("online_server.test", "server_id", "105770"),
 				resource.TestCheckResourceAttr("online_server.test", "public_interface.#", "1"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.address"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.mac"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.dns"),
-			),
-		}},
-	})
-}
-
-func TestResourceServerRPNAdd(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{{
-			ImportStateVerify: true,
-			Config: `
-				resource "online_rpn" "test" {
-					name = "terraform-server-test"
-					vlan = "2242"
-				}
-
-				resource "online_server" "test" {
-					server_id = "105770"
-					hostname = "mvp"
-
-					private_interface {
-						rpn = "${online_rpn.test.name}"
-					}
-				}
-			`,
-			Check: resource.ComposeAggregateTestCheckFunc(
-				resource.TestCheckResourceAttr("online_server.test", "public_interface.#", "1"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.address"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.mac"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.dns"),
+				resource.TestCheckResourceAttr("online_server.test", "public_interface.0.address", "1.2.3.4"),
+				resource.TestCheckResourceAttr("online_server.test", "public_interface.0.mac", "aa:bb:cc:dd:ee:ff"),
+				resource.TestCheckResourceAttr("online_server.test", "public_interface.0.dns", "my.dns.address"),
 				resource.TestCheckResourceAttr("online_server.test", "private_interface.#", "1"),
-				resource.TestCheckResourceAttrSet("online_server.test", "private_interface.0.mac"),
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.0.vlan_id", "2242"),
-			),
-		}, {
-			ImportStateVerify: true,
-			Config: `
-				resource "online_rpn" "test" {
-					name = "terraform-server-test"
-					vlan = "2242"
-				}
-
-				resource "online_rpn" "test_alt" {
-					name = "terraform-server-test_alt"
-					vlan = "2243"
-				}
-
-				resource "online_server" "test" {
-					server_id = "105770"
-					hostname = "mvp"
-
-					private_interface {
-						rpn = "${online_rpn.test.name}"
-					}
-
-					private_interface {
-						rpn = "${online_rpn.test_alt.name}"
-					}
-				}
-			`,
-			Check: resource.ComposeAggregateTestCheckFunc(
-				resource.TestCheckResourceAttr("online_server.test", "public_interface.#", "1"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.address"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.mac"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.dns"),
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.#", "2"),
-				resource.TestCheckResourceAttrSet("online_server.test", "private_interface.0.mac"),
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.0.vlan_id", "2242"),
-				resource.TestCheckResourceAttrSet("online_server.test", "private_interface.1.mac"),
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.1.vlan_id", "2243"),
-			),
-		}},
-	})
-}
-
-func TestResourceServerRPNDelete(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{{
-			ImportStateVerify: true,
-			Config: `
-				resource "online_rpn" "test" {
-					name = "terraform-server-test"
-					vlan = "2242"
-				}
-
-				resource "online_server" "test" {
-					server_id = "105770"
-					hostname = "mvp"
-
-					private_interface {
-						rpn = "${online_rpn.test.name}"
-					}
-				}
-			`,
-			Check: resource.ComposeAggregateTestCheckFunc(
-				resource.TestCheckResourceAttr("online_server.test", "public_interface.#", "1"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.address"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.mac"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.dns"),
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.#", "1"),
-				resource.TestCheckResourceAttrSet("online_server.test", "private_interface.0.mac"),
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.0.vlan_id", "2242"),
-			),
-		}, {
-			ImportStateVerify: true,
-			Config: `
-				resource "online_rpn" "test" {
-					name = "terraform-server-test"
-					vlan = "2242"
-				}
-
-				resource "online_server" "test" {
-					server_id = "105770"
-					hostname = "mvp"
-
-					private_interface {}
-				}
-
-				resource "online_server" "foo" {
-					server_id = "105771"
-					hostname = "mvp"
-
-					private_interface {
-						rpn = "${online_rpn.test.name}"
-					}
-				}
-			`,
-			Check: resource.ComposeAggregateTestCheckFunc(
-				resource.TestCheckResourceAttr("online_server.test", "public_interface.#", "1"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.address"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.mac"),
-				resource.TestCheckResourceAttrSet("online_server.test", "public_interface.0.dns"),
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.#", "1"),
-				resource.TestCheckResourceAttrSet("online_server.test", "private_interface.0.mac"),
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.0.vlan_id", "0"),
+				resource.TestCheckResourceAttr("online_server.test", "private_interface.0.address", "10.2.3.4"),
+				resource.TestCheckResourceAttr("online_server.test", "private_interface.0.mac", "00:bb:cc:dd:ee:ff"),
 			),
 		}},
 	})

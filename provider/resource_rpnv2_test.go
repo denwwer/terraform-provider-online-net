@@ -6,41 +6,27 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
-func TestResourceRPN(t *testing.T) {
+func TestResourceRPNv2(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{{
 			ImportStateVerify: true,
 			Config: `
-				resource "online_rpn" "test" {
-					name = "terraform-server-test"
+				resource "online_rpnv2" "test" {
+					name = "rpn-test"
 					vlan = "2242"
+					server_ids = ["${online_server.test.server_id}"]
 				}
 
 				resource "online_server" "test" {
-	 				name = "105770"
+					server_id = 105770
 					hostname = "mvp"
-
-					private_interface {
-						rpn = "${online_rpn.test.name}"
-					}
 				}
 			`,
 			Check: resource.ComposeAggregateTestCheckFunc(
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.0.vlan_id", "2242"),
-			),
-		}, {
-			ImportStateVerify: true,
-			Config: `
-				resource "online_server" "test" {
-	 				name = "105770"
-					hostname = "mvp"
-
-					private_interface {}
-				}
-			`,
-			Check: resource.ComposeAggregateTestCheckFunc(
-				resource.TestCheckResourceAttr("online_server.test", "private_interface.0.vlan_id", "0"),
+				resource.TestCheckResourceAttr("online_rpnv2.test", "vlan", "2242"),
+				resource.TestCheckResourceAttr("online_rpnv2.test", "server_ids.#", "1"),
+				resource.TestCheckResourceAttr("online_rpnv2.test", "server_ids.0", "105770"),
 			),
 		}},
 	})
