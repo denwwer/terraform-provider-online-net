@@ -12,7 +12,7 @@ import (
 
 func init() {
 	onlineClientMock.On("EditFailoverIP", "127.0.0.1", "8.8.8.8").Return(nil)
-	onlineClientMock.On("EditFailoverIP", "127.0.0.1", "false").Return(nil)
+	onlineClientMock.On("EditFailoverIP", "127.0.0.1", "").Return(nil)
 	onlineClientMock.On("GenerateMACFailoverIP", "127.0.0.1", "kvm").Return("ma:ac:te:st", nil)
 	onlineClientMock.On("DeleteMACFailoverIP", "127.0.0.1").Return(nil)
 	onlineClientMock.On("Server", 123).Return(&online.Server{
