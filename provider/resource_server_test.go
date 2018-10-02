@@ -71,8 +71,7 @@ func TestResourceServerUnit(t *testing.T) {
 
 func TestResourceServerAcceptance(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		Providers:  testAccProviders,
-		IsUnitTest: true,
+		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
 				ImportStateVerify: true,
