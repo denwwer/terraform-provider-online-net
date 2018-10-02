@@ -94,7 +94,7 @@ func resourceFailoverIPCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	err := c.EditFailoverIP(ip, dstIP)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "Address already provisioned") {
 		return err
 	}
 
