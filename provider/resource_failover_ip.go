@@ -2,6 +2,7 @@ package provider
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/src-d/terraform-provider-online-net/online"
@@ -79,7 +80,7 @@ func resourceFailoverIPCreate(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(ip)
 
-	dstIP := "false"
+	dstIP := ""
 
 	if hasServerIP {
 		dstIP = serverIPInterface.(string)
@@ -122,7 +123,7 @@ func resourceFailoverIPDelete(d *schema.ResourceData, meta interface{}) error {
 		d.Set("mac", "")
 	}
 
-	err := c.EditFailoverIP(ip, "false")
+	err := c.EditFailoverIP(ip, "")
 	return err
 }
 
